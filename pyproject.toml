@@ -1,0 +1,13 @@
+[project]
+name = "storage_explorer"
+version = "1.0.0"
+description = "The basic storage explorer app."
+dependencies = [
+    "flask",
+    "cloud-sql-python-connector[pytds]",
+    "google-cloud-storage",
+]
+
+[build-system]
+requires = ["flit_core<4"]
+build-backend = "flit_core.buildapi"
