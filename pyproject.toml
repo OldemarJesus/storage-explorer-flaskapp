@@ -6,6 +6,7 @@ dependencies = [
     "flask",
     "cloud-sql-python-connector[pytds]",
     "google-cloud-storage",
+    "SQLAlchemy"
 ]
 
 [build-system]

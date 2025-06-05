@@ -1,7 +1,17 @@
 import os
+import logging
 from flask import Flask
 
 def app(test_config=None):
+  # logging.basicConfig(level=logging.INFO)
+  # Set up logging
+  logging.basicConfig(
+      level=logging.INFO,
+      format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  )
+  logger = logging.getLogger(__name__)
+  logger.info("Initializing Flask app...")
+  
   # create and configure the app
   app = Flask(__name__, instance_relative_config=True)
   app.config.from_mapping(
@@ -22,6 +32,9 @@ def app(test_config=None):
     pass
 
   # Register blueprints
+  from storage_explorer import db
+  db.init_app(app)
+
   from storage_explorer.home import home_bp
   app.register_blueprint(home_bp)
 
