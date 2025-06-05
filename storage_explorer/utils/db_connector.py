@@ -84,7 +84,7 @@ def connect_tcp_socket() -> sqlalchemy.engine.base.Engine:
     db_user = os.environ["DB_USER"]  # e.g. 'my-db-user'
     db_pass = os.environ["DB_PASS"]  # e.g. 'my-db-password'
     db_name = os.environ["DB_NAME"]  # e.g. 'my-database'
-    db_port = os.environ["DB_PORT"]  # e.g. 1433
+    db_port = int(os.environ["DB_PORT"])  # e.g. 1433
 
     # [END cloud_sql_sqlserver_sqlalchemy_connect_tcp]
     # [START_EXCLUDE]
