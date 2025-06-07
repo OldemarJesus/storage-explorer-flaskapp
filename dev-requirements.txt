@@ -1,0 +1,8 @@
+Flask==3.1.1
+cloud-sql-python-connector[pytds]==1.18.2
+google-cloud-storage==3.1.0
+SQLAlchemy==2.0.41
+sqlalchemy-pytds==1.0.2
+python-tds==1.16.1
+# For local development, you might want to use the following:
+python-dotenv==1.0.0

@@ -14,6 +14,7 @@ from sqlalchemy import DateTime
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import MetaData
+from sqlalchemy.sql import func
 
 from sqlalchemy import Table
 
@@ -51,7 +52,7 @@ def migrate_db(db: sqlalchemy.engine.base.Engine) -> None:
             Column("username", String(100), nullable=False),
             Column("name", String(100), nullable=False),
             Column("password", String(255), nullable=False),
-            Column("created_at", DateTime, default=datetime.timezone.utc, nullable=False)
+            Column("created_at", DateTime, default=func.now(), nullable=False)
         )
         metadata.create_all(db)
 
@@ -71,6 +72,12 @@ def init_db() -> None:
     if db is None:
         db = init_connection_pool()
         migrate_db(db)
+
+def get_db() -> sqlalchemy.engine.base.Engine:
+    """Get the database connection pool."""
+    if db is None:
+        init_db()
+    return db
 
 @click.command('init-db')
 def init_db_command():

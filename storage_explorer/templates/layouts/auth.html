@@ -4,10 +4,24 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
   </head>
   <body class="d-flex flex-column min-vh-100">
-    <main class="container my-4">
+    <main class="container my-4 w-100 d-flex justify-content-center align-items-center flex-column">
       {% block content %}
       <p class="lead">Authorization required!</p>
       {% endblock %}
+      <!-- Show validation errors from flash if any -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul class="alert w-50">
+            {% for category, message in messages %}
+              {% if category == 'validation' %}
+                <li class="text-danger">{{ message }}</li>
+              {% elif category == 'success' %}
+                <li class="text-success">{{ message }}</li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
     </main>
 
     <!-- Link to go back to home -->
