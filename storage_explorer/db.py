@@ -1,8 +1,5 @@
 from __future__ import annotations
-import os
-import click
-import datetime
-import logging
+import os, uuid, click, logging, datetime
 
 from flask import (
     Blueprint
@@ -52,6 +49,16 @@ def migrate_db(db: sqlalchemy.engine.base.Engine) -> None:
             Column("username", String(100), nullable=False),
             Column("name", String(100), nullable=False),
             Column("password", String(255), nullable=False),
+            Column("gcp_bucket_name", String(255), nullable=False),
+            Column("created_at", DateTime, default=func.now(), nullable=False)
+        )
+        metadata.create_all(db)
+    if not inspector.has_table("invite_tokens"):
+        metadata = MetaData()
+        Table(
+            "invite_tokens",
+            metadata,
+            Column("invite_token_id", String(255), primary_key=True, nullable=False),
             Column("created_at", DateTime, default=func.now(), nullable=False)
         )
         metadata.create_all(db)
@@ -79,6 +86,24 @@ def get_db() -> sqlalchemy.engine.base.Engine:
         init_db()
     return db
 
+@click.command('generate-token')
+@click.argument('quantity', type=int, default=1)
+def generate_token_command(quantity: int):
+    """Generate a new invite token."""
+    init_db()
+    db = get_db()
+
+    with db.connect() as connection:
+        for _ in range(quantity):
+            invite_token = uuid.uuid4().hex
+            connection.execute(
+                sqlalchemy.text("INSERT INTO invite_tokens (invite_token_id, created_at) VALUES (:invite_token, :created_at)"),
+                {"invite_token": invite_token, "created_at": datetime.datetime.now(datetime.timezone.utc)}
+            )
+            connection.commit()
+            click.echo(f"Generated invite token: {invite_token}")
+    
+
 @click.command('init-db')
 def init_db_command():
     """Clear the existing data and create new tables."""
@@ -87,6 +112,7 @@ def init_db_command():
 
 def init_app(app):
     app.cli.add_command(init_db_command)
+    app.cli.add_command(generate_token_command)
 
     @app.before_request
     def run_init_db():

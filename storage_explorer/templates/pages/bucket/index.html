@@ -1,0 +1,50 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Bucket - Storage Explorer{% endblock %}
+
+{% block content %}
+<h2 class="mt-4">Bucket</h2>
+
+<form action="{{ url_for('bucket.upload') }}" method="post" enctype="multipart/form-data" class="border p-4 mb-4">
+  <div class="mb-3">
+    <label for="file" class="form-label">Upload File</label>
+    <input type="file" class="form-control" id="file" name="file" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Upload</button>
+</form>
+
+{% if files %}
+<div class="row">
+  {% for file in files %}
+  <div class="col-sm-4 mb-3">
+    <div class="card">
+      <a class="btn btn-outline-secondary">
+        {% if file.endswith('.md') %}
+        <i class="bi bi-file-earmark-text"></i>
+        {% elif file.endswith('.jpg') or file.endswith('.jpeg') or file.endswith('.png') %}
+        <i class="bi bi-file-earmark-image"></i>
+        {% elif file.endswith('.pdf') %}
+        <i class="bi bi-file-earmark-pdf"></i>
+        {% else %}
+        <i class="bi bi-file-earmark"></i>
+        {% endif %}
+        
+        {{ file }}
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p>No files found. Please upload a new file.</p>
+  {% endif %}
+
+  {% if errors %}
+  <div class="alert alert-danger" role="alert">
+    <ul>
+      {% for error in errors %}
+      <li>{{ error }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% endblock %}

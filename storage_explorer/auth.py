@@ -1,4 +1,4 @@
-import logging, datetime
+import logging, datetime, functools
 from flask import (
   Blueprint, render_template, redirect, url_for, flash, request, session, g
 )
@@ -46,9 +46,10 @@ def register():
         username = request.form.get('username')
         fullname = request.form.get('fullname')
         password = request.form.get('password')
+        invite_token = request.form.get('invite_token')
 
         # validate and save user registration logic here
-        if not username or not fullname or not password:
+        if not username or not fullname or not password or not invite_token:
             flash('All fields are required!', 'validation')
             return redirect(url_for('auth.register'))
         
@@ -79,8 +80,17 @@ def register():
             flash('An error occurred while checking the username. Please try again or ask admin to investigate.', 'error')
             return redirect(url_for('auth.register'))
         
+        # check if invite token is valid
+        invite_token_data = get_invite_token(invite_token)
+        if invite_token_data == -1:
+            flash('An error occurred while checking the invite token. Please try again or ask admin to investigate.', 'error')
+            return redirect(url_for('auth.register'))
+        if not invite_token_data:
+            flash('Invalid invite token. Please check the token and try again.', 'validation')
+            return redirect(url_for('auth.register'))
+        
         # save user to database
-        res = save_user(username, fullname, password)
+        res = save_user(username, fullname, password, invite_token)
         if res == 0:
             return redirect(url_for('auth.login'))
         elif res == -1:
@@ -91,6 +101,16 @@ def register():
 def logout():
     session.clear()
     return redirect(url_for('home.index'))
+
+def login_required(view):
+    @functools.wraps(view)
+    def wrapped_view(**kwargs):
+        if g.user is None or g.user.get('username') is None:
+            return redirect(url_for('auth.login'))
+
+        return view(**kwargs)
+
+    return wrapped_view
 
 @auth_bp.before_app_request
 def load_logged_in_user():
@@ -107,13 +127,17 @@ def load_logged_in_user():
             g.user = user
 
 # Database operations
-def save_user(username, fullname, password):
+def save_user(username, fullname, password, invite_token):
     """Save a new user to the database."""
     # Assuming get_db() returns a database connection
     db = get_db()
 
     stmt = sqlalchemy.text(
-        "INSERT INTO users (username, name, password, created_at) VALUES (:username, :name, :password, :created_at)"
+        "INSERT INTO users (username, name, password, gcp_bucket_name, created_at) VALUES (:username, :name, :password, :gcp_bucket_name, :created_at)"
+    )
+
+    remove_token_smt = sqlalchemy.text(
+        "DELETE FROM invite_tokens WHERE invite_token_id = :invite_token_id"
     )
 
     try:
@@ -122,7 +146,12 @@ def save_user(username, fullname, password):
                 'username': username,
                 'name': fullname,
                 'password': password,  # In a real application, hash the password!
+                'gcp_bucket_name': generate_bucket_name_from_user_info(username),  # Generate a unique bucket name
                 'created_at': datetime.datetime.now(datetime.timezone.utc)
+            })
+            # Remove the invite token after successful registration
+            conn.execute(remove_token_smt, parameters={
+                'invite_token_id': invite_token
             })
             conn.commit()
         flash('User registered successfully!', 'success')
@@ -164,3 +193,28 @@ def get_user(username, with_pw = False) -> dict:
         logger.exception(e)
         flash('An error occurred while retrieving the user. Please try again or ask admin to investigate.', 'error')
     return -1
+
+def get_invite_token(token_id: str) -> dict:
+    """Retrieve an invite token from the database by token ID."""
+    db = get_db()
+    stmt = sqlalchemy.text(
+        "SELECT TOP 1 invite_token_id, created_at FROM invite_tokens WHERE invite_token_id = :token_id"
+    )
+    try:
+        with db.connect() as conn:
+            result = conn.execute(stmt, parameters={'token_id': token_id}).fetchone()
+        if result:
+            return {
+                'invite_token_id': result[0],
+                'created_at': result[1]
+            }
+        return {}
+    except Exception as e:
+        logger.exception(e)
+        flash('An error occurred while retrieving the invite token. Please try again or ask admin to investigate.', 'error')
+    return -1
+
+# Utils
+def generate_bucket_name_from_user_info(username: str) -> str:
+    """Generate a unique bucket name from the username."""
+    return f"bucket-{username}-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
